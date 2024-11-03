@@ -11,6 +11,7 @@ import (
 
 type SubjectModel interface {
 	CreateSubject(age uint, englishLevel string, detail string) (string, error)
+	FindSubjectByIdForLogin(idForLogin string) (*entity.Subject, error)
 }
 
 type subjectModel struct {
@@ -47,4 +48,16 @@ func (m *subjectModel) CreateSubject(age uint, englishLevel string, detail strin
 	}
 
 	return idForLogin, tx.Commit().Error
+}
+
+func (m *subjectModel) FindSubjectByIdForLogin(idForLogin string) (*entity.Subject, error) {
+	var subject entity.Subject
+
+	if err := m.db.Where(&entity.Subject{
+		IdForLogin: idForLogin,
+	}).First(&subject).Error; err != nil {
+		return nil, err
+	}
+
+	return &subject, nil
 }
