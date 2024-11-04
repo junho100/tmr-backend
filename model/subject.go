@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"tmr-backend/entity"
 
 	"gorm.io/gorm"
@@ -43,6 +44,15 @@ func (m *subjectModel) CreateSubject(age uint, englishLevel string, detail strin
 	idForLogin := fmt.Sprintf("%s%s", "lab", strconv.Itoa(int(subject.ID)))
 	subject.IdForLogin = idForLogin
 	if err := tx.Save(subject).Error; err != nil {
+		tx.Rollback()
+		return "", err
+	}
+
+	lab := &entity.Lab{
+		SubjectID: subject.ID,
+		StartDate: time.Now(),
+	}
+	if err := tx.Save(lab).Error; err != nil {
 		tx.Rollback()
 		return "", err
 	}
