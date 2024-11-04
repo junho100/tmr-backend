@@ -16,13 +16,13 @@ type LabSleepHistory struct {
 	LabID         uint
 	Lab           Lab
 	AverageVolume int       `gorm:"average_volume"`
-	Timestamp     time.Time `gorm:"column:timestamp;type:date"`
+	Timestamp     time.Time `gorm:"column:timestamp;type:datetime"`
 }
 
 type LabCueHistory struct {
 	ID         uint `gorm:"primary_key"`
 	LabID      uint
 	Lab        Lab
-	Timestamp  time.Time `gorm:"column:timestamp;type:date"`
+	Timestamp  time.Time `gorm:"column:timestamp;type:datetime"`
 	TargetWord string    `gorm:"column:target_word"`
 }
