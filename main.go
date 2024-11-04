@@ -12,7 +12,9 @@ func main() {
 	config := config.NewConfig()
 
 	subjectModel := model.NewSubjectModel(config.DB)
+	labModel := model.NewLabModel(config.DB)
 
+	handler.NewLabHandler(router, labModel)
 	handler.NewSubjectHandler(router, subjectModel)
 
 	router.Run(":8080")
