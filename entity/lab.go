@@ -20,8 +20,9 @@ type LabSleepHistory struct {
 }
 
 type LabCueHistory struct {
-	ID        uint `gorm:"primary_key"`
-	LabID     uint
-	Lab       Lab
-	Timestamp time.Time `gorm:"column:timestamp;type:date"`
+	ID         uint `gorm:"primary_key"`
+	LabID      uint
+	Lab        Lab
+	Timestamp  time.Time `gorm:"column:timestamp;type:date"`
+	TargetWord string    `gorm:"column:target_word"`
 }
