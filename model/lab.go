@@ -10,6 +10,7 @@ import (
 type LabModel interface {
 	CreateBreathingHistory(idForLogin string, averageVolume int, timestamp time.Time) error
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
+	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
 }
 
 type labModel struct {
@@ -51,4 +52,23 @@ func (m *labModel) GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, er
 	}
 
 	return lab, nil
+}
+
+func (m *labModel) CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error {
+	lab, err := m.GetLabBySubjectIdForLogin(idForLogin)
+
+	if err != nil {
+		return err
+	}
+
+	cueHistroy := &entity.LabCueHistory{
+		LabID:      lab.ID,
+		Timestamp:  timestamp,
+		TargetWord: targetWord,
+	}
+	if err := m.db.Save(cueHistroy).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
