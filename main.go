@@ -16,6 +16,7 @@ func main() {
 
 	handler.NewLabHandler(router, labModel)
 	handler.NewSubjectHandler(router, subjectModel)
+	handler.NewHealthCheck(router)
 
 	router.Run(":8080")
 }
