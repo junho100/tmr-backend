@@ -5,6 +5,7 @@ import (
 	"tmr-backend/handler"
 	"tmr-backend/model"
 	"tmr-backend/router"
+	"tmr-backend/util"
 )
 
 func main() {
@@ -14,7 +15,9 @@ func main() {
 	subjectModel := model.NewSubjectModel(config.DB)
 	labModel := model.NewLabModel(config.DB)
 
-	handler.NewLabHandler(router, labModel)
+	slackUtil := util.NewSlackUtil()
+
+	handler.NewLabHandler(router, labModel, slackUtil)
 	handler.NewSubjectHandler(router, subjectModel)
 	handler.NewHealthCheck(router)
 

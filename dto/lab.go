@@ -13,3 +13,7 @@ type CreateCueHistoryRequest struct {
 	Timestamp  time.Time `json:"timestamp"`
 	TargetWord string    `json:"target_word"`
 }
+
+type StartLabRequest struct {
+	LabID string `json:"lab_id"`
+}

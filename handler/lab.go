@@ -4,21 +4,25 @@ import (
 	"net/http"
 	"tmr-backend/dto"
 	"tmr-backend/model"
+	"tmr-backend/util"
 
 	"github.com/gin-gonic/gin"
 )
 
 type LabHandler struct {
-	labModel model.LabModel
+	labModel  model.LabModel
+	slackUtil util.SlackUtil
 }
 
-func NewLabHandler(router *gin.Engine, labModel model.LabModel) {
+func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.SlackUtil) {
 	labHandler := &LabHandler{
-		labModel: labModel,
+		labModel:  labModel,
+		slackUtil: slackUtil,
 	}
 
 	router.POST("/api/labs/breathing", labHandler.CreateBreathingHistory)
 	router.POST("/api/labs/cue", labHandler.CreateCueHistory)
+	router.POST("/api/labs/start-test", labHandler.StartLab)
 }
 
 func (h *LabHandler) CreateBreathingHistory(c *gin.Context) {
@@ -48,6 +52,21 @@ func (h *LabHandler) CreateCueHistory(c *gin.Context) {
 	if err := h.labModel.CreateCueHistory(createCueHistoryRequest.IdForLogin, createCueHistoryRequest.Timestamp, createCueHistoryRequest.TargetWord); err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
+	}
+
+	c.JSON(http.StatusCreated, nil)
+}
+
+func (h *LabHandler) StartLab(c *gin.Context) {
+	var startLabRequest dto.StartLabRequest
+
+	if err := c.BindJSON(&startLabRequest); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, nil)
+		return
+	}
+
+	if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
+		c.JSON(http.StatusInternalServerError, nil)
 	}
 
 	c.JSON(http.StatusCreated, nil)
