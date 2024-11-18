@@ -34,7 +34,7 @@ func NewConfig() *Config {
 		log.Fatalf("Error initialize database: %s", err)
 	}
 
-	db.AutoMigrate(&entity.Subject{}, &entity.Lab{}, &entity.LabSleepHistory{}, &entity.LabCueHistory{}, &entity.LabTest{}, &entity.LabTestHistory{})
+	db.AutoMigrate(&entity.Subject{}, &entity.Lab{}, &entity.LabSleepHistory{}, &entity.LabCueHistory{}, &entity.LabTest{}, &entity.LabTestHistory{}, &entity.LabCueTargetWord{})
 
 	return &Config{
 		DB: db,

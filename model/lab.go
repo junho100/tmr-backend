@@ -5,6 +5,7 @@ import (
 	"tmr-backend/dto"
 	"tmr-backend/entity"
 
+	"golang.org/x/exp/rand"
 	"gorm.io/gorm"
 )
 
@@ -121,6 +122,8 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 		return err
 	}
 
+	correctTestHistories := []*entity.LabTestHistory{}
+	wrongTestHistories := []*entity.LabTestHistory{}
 	for _, result := range createTestHistoryDto.Results {
 		testHistory := entity.LabTestHistory{
 			LabTestID: createTestHistoryDto.LabTestID,
@@ -132,7 +135,85 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 			tx.Rollback()
 			return err
 		}
+
+		if result.IsCorrect {
+			correctTestHistories = append(correctTestHistories, &testHistory)
+		} else {
+			wrongTestHistories = append(wrongTestHistories, &testHistory)
+		}
+	}
+
+	labTest := entity.LabTest{}
+	if err := tx.Where(&entity.LabTest{
+		ID: createTestHistoryDto.LabTestID,
+	}).First(&labTest).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Where(&entity.LabCueTargetWord{
+		LabID: labTest.LabID,
+	}).Delete(&entity.LabCueTargetWord{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	numberOfCorrectWord := len(correctTestHistories)
+	var numberOfWrongWord int
+	if len(correctTestHistories)%3 != 0 {
+		for {
+			numberOfCorrectWord--
+
+			if numberOfCorrectWord%3 == 0 {
+				numberOfCorrectWord /= 3
+				numberOfCorrectWord *= 2
+				break
+			}
+		}
+	} else {
+		numberOfCorrectWord /= 3
+		numberOfCorrectWord *= 2
+	}
+	numberOfWrongWord = 80 - numberOfCorrectWord
+
+	targetWords := m.PickCueTargetWords(correctTestHistories, numberOfCorrectWord, wrongTestHistories, numberOfWrongWord)
+	for _, targetWord := range targetWords {
+		cueWord := entity.LabCueTargetWord{
+			LabID: labTest.LabID,
+			Word:  targetWord.Word,
+		}
+
+		if err := tx.Save(&cueWord).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	return tx.Commit().Error
+}
+
+func (m *labModel) PickCueTargetWords(corrects []*entity.LabTestHistory, numberOfCorrectWord int, wrongs []*entity.LabTestHistory, numberOfWrongWord int) []*entity.LabTestHistory {
+	results := make([]*entity.LabTestHistory, numberOfCorrectWord+numberOfWrongWord)
+
+	// 각 배열에서 랜덤하게 선택
+	rand.Seed(uint64(time.Now().UnixNano()))
+
+	// 정답 단어 선택
+	correctIndices := rand.Perm(len(corrects))[:numberOfCorrectWord]
+	for i, idx := range correctIndices {
+		results[i] = corrects[idx]
+	}
+
+	// 오답 단어 선택
+	wrongIndices := rand.Perm(len(wrongs))[:numberOfWrongWord]
+	for i, idx := range wrongIndices {
+		results[numberOfCorrectWord+i] = wrongs[idx]
+	}
+
+	// 결과 배열을 섞음
+	rand.Shuffle(len(results), func(i, j int) {
+		results[i], results[j] = results[j], results[i]
+	})
+
+	return results
 }
