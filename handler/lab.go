@@ -23,6 +23,7 @@ func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.S
 	router.POST("/api/labs/breathing", labHandler.CreateBreathingHistory)
 	router.POST("/api/labs/cue", labHandler.CreateCueHistory)
 	router.POST("/api/labs/start-test", labHandler.StartLab)
+	router.POST("/api/labs/test", labHandler.CreateTestHistory)
 }
 
 func (h *LabHandler) CreateBreathingHistory(c *gin.Context) {
@@ -79,6 +80,37 @@ func (h *LabHandler) StartLab(c *gin.Context) {
 
 	if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
 		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusCreated, nil)
+}
+
+func (h *LabHandler) CreateTestHistory(c *gin.Context) {
+	var createTestHistoryRequest dto.CreateTestHistoryRequest
+
+	if err := c.BindJSON(&createTestHistoryRequest); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, nil)
+		return
+	}
+
+	labTest, err := h.labModel.GetLabTestByIdForLogin(createTestHistoryRequest.IdForLogin)
+	if err != nil {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+
+	createTestHistoryDtoResults := make([]dto.CreateTestHistoryDtoResult, len(createTestHistoryRequest.Results))
+	for i, v := range createTestHistoryRequest.Results {
+		createTestHistoryDtoResults[i] = dto.CreateTestHistoryDtoResult(v)
+	}
+	createTestHistoryDto := dto.CreateTestHistoryDto{
+		LabTestID: labTest.ID,
+		Results:   createTestHistoryDtoResults,
+	}
+
+	if err := h.labModel.CreateTestHistory(createTestHistoryDto); err != nil {
+		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 

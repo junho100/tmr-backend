@@ -2,6 +2,7 @@ package model
 
 import (
 	"time"
+	"tmr-backend/dto"
 	"tmr-backend/entity"
 
 	"gorm.io/gorm"
@@ -12,6 +13,8 @@ type LabModel interface {
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
 	CreatePreTest(labID uint) error
+	GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error)
+	CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) error
 }
 
 type labModel struct {
@@ -86,4 +89,50 @@ func (m *labModel) CreatePreTest(labID uint) error {
 	}
 
 	return nil
+}
+
+func (m *labModel) GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error) {
+	lab, err := m.GetLabBySubjectIdForLogin(idForLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var labTest entity.LabTest
+
+	if err := m.db.Where(&entity.LabTest{
+		ID: lab.ID,
+	}).First(&labTest).Error; err != nil {
+		return nil, err
+	}
+
+	return &labTest, nil
+}
+
+func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) error {
+	tx := m.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := tx.Where(&entity.LabTestHistory{
+		LabTestID: createTestHistoryDto.LabTestID,
+	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, result := range createTestHistoryDto.Results {
+		testHistory := entity.LabTestHistory{
+			LabTestID: createTestHistoryDto.LabTestID,
+			Word:      result.Word,
+			IsCorrect: result.IsCorrect,
+		}
+
+		if err := tx.Save(&testHistory).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
