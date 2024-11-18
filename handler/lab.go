@@ -65,8 +65,21 @@ func (h *LabHandler) StartLab(c *gin.Context) {
 		return
 	}
 
+	lab, err := h.labModel.GetLabBySubjectIdForLogin(startLabRequest.LabID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	if err := h.labModel.CreatePreTest(lab.ID); err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
 	if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
 		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 
 	c.JSON(http.StatusCreated, nil)

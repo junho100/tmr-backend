@@ -11,6 +11,7 @@ type LabModel interface {
 	CreateBreathingHistory(idForLogin string, averageVolume int, timestamp time.Time) error
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
+	CreatePreTest(labID uint) error
 }
 
 type labModel struct {
@@ -67,6 +68,20 @@ func (m *labModel) CreateCueHistory(idForLogin string, timestamp time.Time, targ
 		TargetWord: targetWord,
 	}
 	if err := m.db.Save(cueHistroy).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *labModel) CreatePreTest(labID uint) error {
+	preTest := &entity.LabTest{
+		LabID:     labID,
+		StartDate: time.Now(),
+		LabType:   "pretest",
+	}
+
+	if err := m.db.Save(preTest).Error; err != nil {
 		return err
 	}
 
