@@ -26,3 +26,19 @@ type LabCueHistory struct {
 	Timestamp  time.Time `gorm:"column:timestamp;type:datetime(3)"`
 	TargetWord string    `gorm:"column:target_word"`
 }
+
+type LabTest struct {
+	ID        uint `gorm:"primary_key"`
+	LabID     uint
+	Lab       Lab
+	StartDate time.Time `gorm:"column:start_date;type:date"`
+	LabType   string    `gorm:"column:lab_type"`
+}
+
+type LabTestHistory struct {
+	ID        uint `gorm:"primary_key"`
+	LabTestID uint
+	LabTest   LabTest
+	Word      string `gorm:"column:word"`
+	IsCorrect bool   `gorm:"column:is_correct"`
+}
