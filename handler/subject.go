@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"tmr-backend/dto"
 	"tmr-backend/model"
@@ -44,7 +43,6 @@ func (h *SubjectHandler) CreateSubject(c *gin.Context) {
 
 func (h *SubjectHandler) CheckSubjectExists(c *gin.Context) {
 	idForLogin := c.Query("id")
-	fmt.Println(idForLogin)
 
 	if _, err := h.subjectModel.FindSubjectByIdForLogin(idForLogin); err == nil {
 		c.JSON(http.StatusOK, &dto.CheckSubjectExistsResponse{
