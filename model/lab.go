@@ -16,6 +16,7 @@ type LabModel interface {
 	CreatePreTest(labID uint) error
 	GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error)
 	CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) error
+	GetTargetWordsByLabId(labID uint) ([]string, error)
 }
 
 type labModel struct {
@@ -48,15 +49,17 @@ func (m *labModel) CreateBreathingHistory(idForLogin string, averageVolume int, 
 }
 
 func (m *labModel) GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error) {
-	lab := &entity.Lab{}
+	lab := entity.Lab{}
 
-	if err := m.db.Joins("Subject", m.db.Where(&entity.Subject{
-		IdForLogin: idForLogin,
-	})).First(lab).Error; err != nil {
+	if err := m.db.
+		Preload("Subject").
+		Joins("Subject").
+		Where("Subject.id_for_login = ?", idForLogin).
+		First(&lab).Error; err != nil {
 		return nil, err
 	}
 
-	return lab, nil
+	return &lab, nil
 }
 
 func (m *labModel) CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error {
@@ -216,4 +219,21 @@ func (m *labModel) PickCueTargetWords(corrects []*entity.LabTestHistory, numberO
 	})
 
 	return results
+}
+
+func (m *labModel) GetTargetWordsByLabId(labID uint) ([]string, error) {
+	var targetWords []entity.LabCueTargetWord
+
+	if err := m.db.Where(&entity.LabCueTargetWord{
+		LabID: labID,
+	}).Find(&targetWords).Error; err != nil {
+		return nil, err
+	}
+
+	targetWordsString := make([]string, len(targetWords))
+	for i, v := range targetWords {
+		targetWordsString[i] = v.Word
+	}
+
+	return targetWordsString, nil
 }

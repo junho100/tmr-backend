@@ -24,6 +24,7 @@ func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.S
 	router.POST("/api/labs/cue", labHandler.CreateCueHistory)
 	router.POST("/api/labs/start-test", labHandler.StartLab)
 	router.POST("/api/labs/test", labHandler.CreateTestHistory)
+	router.GET("/api/labs/cue", labHandler.GetTargetWords)
 }
 
 func (h *LabHandler) CreateBreathingHistory(c *gin.Context) {
@@ -115,4 +116,25 @@ func (h *LabHandler) CreateTestHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, nil)
+}
+
+func (h *LabHandler) GetTargetWords(c *gin.Context) {
+	idForLogin := c.Query("id")
+
+	lab, err := h.labModel.GetLabBySubjectIdForLogin(idForLogin)
+	if err != nil {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+
+	words, err := h.labModel.GetTargetWordsByLabId(lab.ID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+
+	getTargetWordsResponse := dto.GetTargetWordsResponse{
+		Words: words,
+	}
+	c.JSON(http.StatusOK, getTargetWordsResponse)
 }

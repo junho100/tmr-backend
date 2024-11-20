@@ -37,3 +37,7 @@ type CreateTestHistoryDtoResult struct {
 	Word      string `json:"word"`
 	IsCorrect bool   `json:"is_correct"`
 }
+
+type GetTargetWordsResponse struct {
+	Words []string `json:"words"`
+}
