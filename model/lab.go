@@ -14,8 +14,10 @@ type LabModel interface {
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
 	CreatePreTest(labID uint) error
-	GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error)
-	CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) ([]string, int, int, error)
+	CreateTest(labID uint) error
+	GetLabTestByIdForLogin(idForLogin string, labType string) (*entity.LabTest, error)
+	CreatePreTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) ([]string, int, int, error)
+	CreateTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) error
 	GetTargetWordsByLabId(labID uint) ([]string, error)
 }
 
@@ -85,7 +87,7 @@ func (m *labModel) CreatePreTest(labID uint) error {
 	var exists bool
 	err := m.db.Model(&entity.LabTest{}).
 		Select("1").
-		Where("lab_id = ?", labID).
+		Where("lab_id = ? AND lab_type = ?", labID, "pretest").
 		Limit(1).
 		Find(&exists).Error
 	if err != nil {
@@ -107,7 +109,33 @@ func (m *labModel) CreatePreTest(labID uint) error {
 	return nil
 }
 
-func (m *labModel) GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error) {
+func (m *labModel) CreateTest(labID uint) error {
+	var exists bool
+	err := m.db.Model(&entity.LabTest{}).
+		Select("1").
+		Where("lab_id = ? AND lab_type = ?", labID, "test").
+		Limit(1).
+		Find(&exists).Error
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		test := &entity.LabTest{
+			LabID:     labID,
+			StartDate: time.Now(),
+			LabType:   "test",
+		}
+
+		if err := m.db.Save(test).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *labModel) GetLabTestByIdForLogin(idForLogin string, labType string) (*entity.LabTest, error) {
 	lab, err := m.GetLabBySubjectIdForLogin(idForLogin)
 	if err != nil {
 		return nil, err
@@ -116,7 +144,8 @@ func (m *labModel) GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, e
 	var labTest entity.LabTest
 
 	if err := m.db.Where(&entity.LabTest{
-		ID: lab.ID,
+		LabID:   lab.ID,
+		LabType: labType,
 	}).First(&labTest).Error; err != nil {
 		return nil, err
 	}
@@ -124,14 +153,14 @@ func (m *labModel) GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, e
 	return &labTest, nil
 }
 
-func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) ([]string, int, int, error) {
+func (m *labModel) CreatePreTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) ([]string, int, int, error) {
 	tx := m.db.Begin()
 	if tx.Error != nil {
 		return nil, 0, 0, tx.Error
 	}
 
 	if err := tx.Where(&entity.LabTestHistory{
-		LabTestID: createTestHistoryDto.LabTestID,
+		LabTestID: createPreTestHistoryDto.LabTestID,
 	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
@@ -139,9 +168,9 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 
 	correctTestHistories := []*entity.LabTestHistory{}
 	wrongTestHistories := []*entity.LabTestHistory{}
-	for _, result := range createTestHistoryDto.Results {
+	for _, result := range createPreTestHistoryDto.Results {
 		testHistory := entity.LabTestHistory{
-			LabTestID: createTestHistoryDto.LabTestID,
+			LabTestID: createPreTestHistoryDto.LabTestID,
 			Word:      result.Word,
 			IsCorrect: result.IsCorrect,
 		}
@@ -160,7 +189,7 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 
 	labTest := entity.LabTest{}
 	if err := tx.Where(&entity.LabTest{
-		ID: createTestHistoryDto.LabTestID,
+		ID: createPreTestHistoryDto.LabTestID,
 	}).First(&labTest).Error; err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
@@ -212,6 +241,39 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 	}
 
 	return selectedWords, numberOfCorrectWord, numberOfWrongWord, nil
+}
+
+func (m *labModel) CreateTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) error {
+	tx := m.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := tx.Where(&entity.LabTestHistory{
+		LabTestID: createPreTestHistoryDto.LabTestID,
+	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, result := range createPreTestHistoryDto.Results {
+		testHistory := entity.LabTestHistory{
+			LabTestID: createPreTestHistoryDto.LabTestID,
+			Word:      result.Word,
+			IsCorrect: result.IsCorrect,
+		}
+
+		if err := tx.Save(&testHistory).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *labModel) PickCueTargetWords(corrects []*entity.LabTestHistory, numberOfCorrectWord int, wrongs []*entity.LabTestHistory, numberOfWrongWord int) []*entity.LabTestHistory {

@@ -23,7 +23,7 @@ func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.S
 
 	router.POST("/api/labs/breathing", labHandler.CreateBreathingHistory)
 	router.POST("/api/labs/cue", labHandler.CreateCueHistory)
-	router.POST("/api/labs/start-test", labHandler.StartLab)
+	router.POST("/api/labs/start-test", labHandler.StartTest)
 	router.POST("/api/labs/test", labHandler.CreateTestHistory)
 	router.GET("/api/labs/cue", labHandler.GetTargetWords)
 }
@@ -60,7 +60,7 @@ func (h *LabHandler) CreateCueHistory(c *gin.Context) {
 	c.JSON(http.StatusCreated, nil)
 }
 
-func (h *LabHandler) StartLab(c *gin.Context) {
+func (h *LabHandler) StartTest(c *gin.Context) {
 	var startLabRequest dto.StartLabRequest
 
 	if err := c.BindJSON(&startLabRequest); err != nil {
@@ -75,17 +75,35 @@ func (h *LabHandler) StartLab(c *gin.Context) {
 		return
 	}
 
-	if err := h.labModel.CreatePreTest(lab.ID); err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+	if startLabRequest.Type == "pretest" {
+		if err := h.labModel.CreatePreTest(lab.ID); err != nil {
+			c.JSON(http.StatusBadRequest, nil)
+			return
+		}
+
+		if err := h.slackUtil.SendPreTestStartMessage(startLabRequest.LabID); err != nil {
+			log.Printf("Failed to send slack message: %v", err)
+		}
+
+		c.JSON(http.StatusCreated, nil)
 		return
 	}
 
-	if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
-		c.JSON(http.StatusInternalServerError, nil)
+	if startLabRequest.Type == "test" {
+		if err := h.labModel.CreateTest(lab.ID); err != nil {
+			c.JSON(http.StatusBadRequest, nil)
+			return
+		}
+
+		if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
+			log.Printf("Failed to send slack message: %v", err)
+		}
+
+		c.JSON(http.StatusCreated, nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, nil)
+	c.JSON(http.StatusBadRequest, nil)
 }
 
 func (h *LabHandler) CreateTestHistory(c *gin.Context) {
@@ -96,34 +114,50 @@ func (h *LabHandler) CreateTestHistory(c *gin.Context) {
 		return
 	}
 
-	labTest, err := h.labModel.GetLabTestByIdForLogin(createTestHistoryRequest.IdForLogin)
+	labTest, err := h.labModel.GetLabTestByIdForLogin(createTestHistoryRequest.IdForLogin, createTestHistoryRequest.Type)
 	if err != nil {
 		c.JSON(http.StatusNotFound, nil)
 		return
 	}
 
-	createTestHistoryDtoResults := make([]dto.CreateTestHistoryDtoResult, len(createTestHistoryRequest.Results))
+	createPreTestHistoryDtoResults := make([]dto.CreatePreTestHistoryDtoResult, len(createTestHistoryRequest.Results))
 	for i, v := range createTestHistoryRequest.Results {
-		createTestHistoryDtoResults[i] = dto.CreateTestHistoryDtoResult(v)
+		createPreTestHistoryDtoResults[i] = dto.CreatePreTestHistoryDtoResult(v)
 	}
-	createTestHistoryDto := dto.CreateTestHistoryDto{
+	createTestHistoryDto := dto.CreatePreTestHistoryDto{
 		LabTestID: labTest.ID,
-		Results:   createTestHistoryDtoResults,
+		Results:   createPreTestHistoryDtoResults,
 	}
 
-	selectedWords, correctCount, wrongCount, err := h.labModel.CreateTestHistory(createTestHistoryDto)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+	if createTestHistoryRequest.Type == "pretest" {
+		selectedWords, correctCount, wrongCount, err := h.labModel.CreatePreTestHistory(createTestHistoryDto)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, nil)
+			return
+		}
+
+		// Slack 메시지 전송
+		if err := h.slackUtil.SendTestResultMessage(createTestHistoryRequest.IdForLogin, correctCount, wrongCount, selectedWords); err != nil {
+			// Slack 메시지 전송 실패는 클라이언트에게 에러를 반환하지 않음
+			log.Printf("Failed to send slack message: %v", err)
+		}
+
+		c.JSON(http.StatusCreated, nil)
 		return
 	}
 
-	// Slack 메시지 전송
-	if err := h.slackUtil.SendTestResultMessage(createTestHistoryRequest.IdForLogin, correctCount, wrongCount, selectedWords); err != nil {
-		// Slack 메시지 전송 실패는 클라이언트에게 에러를 반환하지 않음
-		log.Printf("Failed to send slack message: %v", err)
+	if createTestHistoryRequest.Type == "test" {
+		err := h.labModel.CreateTestHistory(createTestHistoryDto)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, nil)
+			return
+		}
+
+		c.JSON(http.StatusCreated, nil)
+		return
 	}
 
-	c.JSON(http.StatusCreated, nil)
+	c.JSON(http.StatusBadRequest, nil)
 }
 
 func (h *LabHandler) GetTargetWords(c *gin.Context) {

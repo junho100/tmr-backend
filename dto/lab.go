@@ -16,10 +16,12 @@ type CreateCueHistoryRequest struct {
 
 type StartLabRequest struct {
 	LabID string `json:"lab_id"`
+	Type  string `json:"type"`
 }
 
 type CreateTestHistoryRequest struct {
 	IdForLogin string                           `json:"id_for_login"`
+	Type       string                           `json:"type"`
 	Results    []CreateTestHistoryRequestResult `json:"results"`
 }
 
@@ -28,12 +30,12 @@ type CreateTestHistoryRequestResult struct {
 	IsCorrect bool   `json:"is_correct"`
 }
 
-type CreateTestHistoryDto struct {
-	Results   []CreateTestHistoryDtoResult
+type CreatePreTestHistoryDto struct {
+	Results   []CreatePreTestHistoryDtoResult
 	LabTestID uint
 }
 
-type CreateTestHistoryDtoResult struct {
+type CreatePreTestHistoryDtoResult struct {
 	Word      string `json:"word"`
 	IsCorrect bool   `json:"is_correct"`
 }
