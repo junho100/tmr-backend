@@ -15,7 +15,7 @@ type LabModel interface {
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
 	CreatePreTest(labID uint) error
 	GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, error)
-	CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) error
+	CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) ([]string, int, int, error)
 	GetTargetWordsByLabId(labID uint) ([]string, error)
 }
 
@@ -112,17 +112,17 @@ func (m *labModel) GetLabTestByIdForLogin(idForLogin string) (*entity.LabTest, e
 	return &labTest, nil
 }
 
-func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) error {
+func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryDto) ([]string, int, int, error) {
 	tx := m.db.Begin()
 	if tx.Error != nil {
-		return tx.Error
+		return nil, 0, 0, tx.Error
 	}
 
 	if err := tx.Where(&entity.LabTestHistory{
 		LabTestID: createTestHistoryDto.LabTestID,
 	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return nil, 0, 0, err
 	}
 
 	correctTestHistories := []*entity.LabTestHistory{}
@@ -136,7 +136,7 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 
 		if err := tx.Save(&testHistory).Error; err != nil {
 			tx.Rollback()
-			return err
+			return nil, 0, 0, err
 		}
 
 		if result.IsCorrect {
@@ -151,14 +151,14 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 		ID: createTestHistoryDto.LabTestID,
 	}).First(&labTest).Error; err != nil {
 		tx.Rollback()
-		return err
+		return nil, 0, 0, err
 	}
 
 	if err := tx.Where(&entity.LabCueTargetWord{
 		LabID: labTest.LabID,
 	}).Delete(&entity.LabCueTargetWord{}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return nil, 0, 0, err
 	}
 
 	numberOfCorrectWord := len(correctTestHistories)
@@ -180,19 +180,26 @@ func (m *labModel) CreateTestHistory(createTestHistoryDto dto.CreateTestHistoryD
 	numberOfWrongWord = 80 - numberOfCorrectWord
 
 	targetWords := m.PickCueTargetWords(correctTestHistories, numberOfCorrectWord, wrongTestHistories, numberOfWrongWord)
-	for _, targetWord := range targetWords {
+	selectedWords := make([]string, len(targetWords))
+
+	for i, targetWord := range targetWords {
 		cueWord := entity.LabCueTargetWord{
 			LabID: labTest.LabID,
 			Word:  targetWord.Word,
 		}
+		selectedWords[i] = targetWord.Word
 
 		if err := tx.Save(&cueWord).Error; err != nil {
 			tx.Rollback()
-			return err
+			return nil, 0, 0, err
 		}
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, 0, err
+	}
+
+	return selectedWords, numberOfCorrectWord, numberOfWrongWord, nil
 }
 
 func (m *labModel) PickCueTargetWords(corrects []*entity.LabTestHistory, numberOfCorrectWord int, wrongs []*entity.LabTestHistory, numberOfWrongWord int) []*entity.LabTestHistory {

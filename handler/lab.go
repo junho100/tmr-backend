@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"tmr-backend/dto"
 	"tmr-backend/model"
@@ -110,9 +111,16 @@ func (h *LabHandler) CreateTestHistory(c *gin.Context) {
 		Results:   createTestHistoryDtoResults,
 	}
 
-	if err := h.labModel.CreateTestHistory(createTestHistoryDto); err != nil {
+	selectedWords, correctCount, wrongCount, err := h.labModel.CreateTestHistory(createTestHistoryDto)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
+	}
+
+	// Slack 메시지 전송
+	if err := h.slackUtil.SendTestResultMessage(createTestHistoryRequest.IdForLogin, correctCount, wrongCount, selectedWords); err != nil {
+		// Slack 메시지 전송 실패는 클라이언트에게 에러를 반환하지 않음
+		log.Printf("Failed to send slack message: %v", err)
 	}
 
 	c.JSON(http.StatusCreated, nil)

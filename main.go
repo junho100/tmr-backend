@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"tmr-backend/config"
 	"tmr-backend/handler"
 	"tmr-backend/model"
@@ -15,9 +16,14 @@ func main() {
 	subjectModel := model.NewSubjectModel(config.DB)
 	labModel := model.NewLabModel(config.DB)
 
-	slackUtil := util.NewSlackUtil()
+	fileUtil := util.NewFileUtil()
+	fileUtil.StartCleanupRoutine()
+
+	baseURL := os.Getenv("BASE_URL")
+	slackUtil := util.NewSlackUtil(fileUtil, baseURL)
 
 	handler.NewLabHandler(router, labModel, slackUtil)
+	handler.NewFileHandler(router)
 	handler.NewSubjectHandler(router, subjectModel)
 	handler.NewHealthCheck(router)
 

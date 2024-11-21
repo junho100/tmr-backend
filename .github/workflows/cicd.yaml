@@ -35,6 +35,7 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" >> .env
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image

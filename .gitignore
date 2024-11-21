@@ -15,3 +15,4 @@ _.so
 
 \*.out
 .env
+temp_files/
