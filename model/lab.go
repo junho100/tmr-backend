@@ -82,14 +82,26 @@ func (m *labModel) CreateCueHistory(idForLogin string, timestamp time.Time, targ
 }
 
 func (m *labModel) CreatePreTest(labID uint) error {
-	preTest := &entity.LabTest{
-		LabID:     labID,
-		StartDate: time.Now(),
-		LabType:   "pretest",
+	var exists bool
+	err := m.db.Model(&entity.LabTest{}).
+		Select("1").
+		Where("lab_id = ?", labID).
+		Limit(1).
+		Find(&exists).Error
+	if err != nil {
+		return err
 	}
 
-	if err := m.db.Save(preTest).Error; err != nil {
-		return err
+	if !exists {
+		preTest := &entity.LabTest{
+			LabID:     labID,
+			StartDate: time.Now(),
+			LabType:   "pretest",
+		}
+
+		if err := m.db.Save(preTest).Error; err != nil {
+			return err
+		}
 	}
 
 	return nil
