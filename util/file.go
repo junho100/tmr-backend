@@ -22,7 +22,7 @@ type fileUtil struct {
 func NewFileUtil() FileUtil {
 	util := &fileUtil{
 		tempDir:    "./temp_files",
-		fileExpiry: 60 * time.Minute,
+		fileExpiry: 24 * time.Hour,
 	}
 
 	// 임시 디렉토리 생성
@@ -39,8 +39,12 @@ func (u *fileUtil) CreateTempCSVFile(content string) (string, error) {
 	filename := fmt.Sprintf("target_words_%s.csv", timestamp)
 	filepath := filepath.Join(u.tempDir, filename)
 
+	// UTF-8 BOM 추가
+	bom := []byte{0xEF, 0xBB, 0xBF}
+	data := append(bom, []byte(content)...)
+
 	// 파일 생성 및 내용 작성
-	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath, data, 0644); err != nil {
 		return "", err
 	}
 

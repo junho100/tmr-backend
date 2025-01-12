@@ -33,6 +33,6 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 
 	// Content-Disposition 헤더 설정
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.File(filePath)
 }

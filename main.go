@@ -22,7 +22,7 @@ func main() {
 	baseURL := os.Getenv("BASE_URL")
 	slackUtil := util.NewSlackUtil(fileUtil, baseURL)
 
-	handler.NewLabHandler(router, labModel, slackUtil)
+	handler.NewLabHandler(router, labModel, slackUtil, fileUtil)
 	handler.NewFileHandler(router)
 	handler.NewSubjectHandler(router, subjectModel)
 	handler.NewHealthCheck(router)

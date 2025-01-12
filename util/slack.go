@@ -12,7 +12,7 @@ import (
 )
 
 type SlackUtil interface {
-	SendPreTestStartMessage(labID string) error
+	SendPreTestStartMessage(labID string, filename string) error
 	SendTestStartMessage(labID string) error
 	SendTestResultMessage(labID string, correctCount int, wrongCount int, words []string) error
 }
@@ -29,10 +29,10 @@ func NewSlackUtil(fileUtil FileUtil, baseURL string) SlackUtil {
 	}
 }
 
-func (u *slackUtil) SendPreTestStartMessage(labID string) error {
+func (u *slackUtil) SendPreTestStartMessage(labID string, filename string) error {
 	url := os.Getenv("SLACK_WEBHOOK_URL")
 	message := dto.SlackMessagePayload{
-		Text: fmt.Sprintf("%s의 사전 테스트가 시작되었습니다. 아래 링크를 클릭해 테스트를 수행하세요.\n <https://junho100.github.io/tmr-lab-web/%s/pretest-result>", labID, labID),
+		Text: fmt.Sprintf("%s의 사전 테스트가 종료되었습니다. 아래 링크를 클릭해 테스트 결과를 확인하세요.\n <https://tmr.chee-go.com/api/files/%s>", labID, filename),
 	}
 
 	jsonData, err := json.Marshal(message)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"tmr-backend/dto"
@@ -13,12 +14,14 @@ import (
 type LabHandler struct {
 	labModel  model.LabModel
 	slackUtil util.SlackUtil
+	fileUtil  util.FileUtil
 }
 
-func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.SlackUtil) {
+func NewLabHandler(router *gin.Engine, labModel model.LabModel, slackUtil util.SlackUtil, fileUtil util.FileUtil) {
 	labHandler := &LabHandler{
 		labModel:  labModel,
 		slackUtil: slackUtil,
+		fileUtil:  fileUtil,
 	}
 
 	router.POST("/api/labs/breathing", labHandler.CreateBreathingHistory)
@@ -69,19 +72,33 @@ func (h *LabHandler) StartTest(c *gin.Context) {
 	}
 
 	lab, err := h.labModel.GetLabBySubjectIdForLogin(startLabRequest.LabID)
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
 	if startLabRequest.Type == "pretest" {
+		// CSV 파일 생성을 위한 데이터 준비
+		csvContent := "Word,WrittenWord\n"
+		for _, result := range startLabRequest.Results {
+			csvContent += fmt.Sprintf("%s,%s\n", result.Word, result.WrittenWord)
+		}
+
+		// 임시 CSV 파일 생성 - fileUtil 직접 사용
+		filename, err := h.fileUtil.CreateTempCSVFile(csvContent)
+		if err != nil {
+			log.Printf("Failed to create CSV file: %v", err)
+			c.JSON(http.StatusInternalServerError, nil)
+			return
+		}
+
 		if err := h.labModel.CreatePreTest(lab.ID, startLabRequest.Results); err != nil {
 			c.JSON(http.StatusBadRequest, nil)
 			return
 		}
 
-		if err := h.slackUtil.SendPreTestStartMessage(startLabRequest.LabID); err != nil {
+		// Slack 메시지 전송
+		if err := h.slackUtil.SendPreTestStartMessage(startLabRequest.LabID, filename); err != nil {
 			log.Printf("Failed to send slack message: %v", err)
 		}
 
