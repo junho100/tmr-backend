@@ -15,8 +15,14 @@ type CreateCueHistoryRequest struct {
 }
 
 type StartLabRequest struct {
-	LabID string `json:"lab_id"`
-	Type  string `json:"type"`
+	LabID   string                  `json:"lab_id"`
+	Type    string                  `json:"type"`
+	Results []StartLabRequestResult `json:"results"`
+}
+
+type StartLabRequestResult struct {
+	Word        string `json:"word"`
+	WrittenWord string `json:"written_word"`
 }
 
 type CreateTestHistoryRequest struct {

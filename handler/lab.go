@@ -76,7 +76,7 @@ func (h *LabHandler) StartTest(c *gin.Context) {
 	}
 
 	if startLabRequest.Type == "pretest" {
-		if err := h.labModel.CreatePreTest(lab.ID); err != nil {
+		if err := h.labModel.CreatePreTest(lab.ID, startLabRequest.Results); err != nil {
 			c.JSON(http.StatusBadRequest, nil)
 			return
 		}

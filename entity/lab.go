@@ -36,11 +36,12 @@ type LabTest struct {
 }
 
 type LabTestHistory struct {
-	ID        uint `gorm:"primary_key"`
-	LabTestID uint
-	LabTest   LabTest
-	Word      string `gorm:"column:word"`
-	IsCorrect bool   `gorm:"column:is_correct"`
+	ID          uint `gorm:"primary_key"`
+	LabTestID   uint
+	LabTest     LabTest
+	Word        string `gorm:"column:word"`
+	WriitenWord string `gorm:"column:wriiten_word"`
+	IsCorrect   bool   `gorm:"column:is_correct"`
 }
 
 type LabCueTargetWord struct {

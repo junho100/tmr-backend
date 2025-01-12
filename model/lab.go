@@ -13,7 +13,7 @@ type LabModel interface {
 	CreateBreathingHistory(idForLogin string, averageVolume int, timestamp time.Time) error
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
-	CreatePreTest(labID uint) error
+	CreatePreTest(labID uint, results []dto.StartLabRequestResult) error
 	CreateTest(labID uint) error
 	GetLabTestByIdForLogin(idForLogin string, labType string) (*entity.LabTest, error)
 	CreatePreTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) ([]string, int, int, error)
@@ -83,30 +83,56 @@ func (m *labModel) CreateCueHistory(idForLogin string, timestamp time.Time, targ
 	return nil
 }
 
-func (m *labModel) CreatePreTest(labID uint) error {
-	var exists bool
-	err := m.db.Model(&entity.LabTest{}).
-		Select("1").
-		Where("lab_id = ? AND lab_type = ?", labID, "pretest").
-		Limit(1).
-		Find(&exists).Error
-	if err != nil {
-		return err
+func (m *labModel) CreatePreTest(labID uint, results []dto.StartLabRequestResult) error {
+	// 트랜잭션 시작
+	tx := m.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
 	}
 
-	if !exists {
-		preTest := &entity.LabTest{
+	// pretest 존재 여부 확인
+	var labTest entity.LabTest
+	err := tx.Where("lab_id = ? AND lab_type = ?", labID, "pretest").
+		First(&labTest).Error
+
+	if err == gorm.ErrRecordNotFound {
+		// pretest가 없으면 새로 생성
+		labTest = entity.LabTest{
 			LabID:     labID,
 			StartDate: time.Now(),
 			LabType:   "pretest",
 		}
+		if err := tx.Create(&labTest).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	} else if err != nil {
+		tx.Rollback()
+		return err
+	}
 
-		if err := m.db.Save(preTest).Error; err != nil {
+	// 기존 LabTestHistory 삭제
+	if err := tx.Where("lab_test_id = ?", labTest.ID).
+		Delete(&entity.LabTestHistory{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 새로운 LabTestHistory 생성
+	for _, result := range results {
+		testHistory := entity.LabTestHistory{
+			LabTestID:   labTest.ID,
+			Word:        result.Word,
+			WriitenWord: result.WrittenWord,
+		}
+		if err := tx.Create(&testHistory).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
 
-	return nil
+	// 트랜잭션 커밋
+	return tx.Commit().Error
 }
 
 func (m *labModel) CreateTest(labID uint) error {
