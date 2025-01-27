@@ -114,8 +114,10 @@ func (m *labModel) CreatePreTest(labID uint, results []dto.StartLabRequestResult
 	// 기존 LabTestHistory 삭제
 	if err := tx.Where("lab_test_id = ?", labTest.ID).
 		Delete(&entity.LabTestHistory{}).Error; err != nil {
-		tx.Rollback()
-		return err
+		if err != gorm.ErrRecordNotFound {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	// 새로운 LabTestHistory 생성
@@ -165,8 +167,10 @@ func (m *labModel) CreateTest(labID uint, results []dto.StartLabRequestResult) e
 	// 기존 LabTestHistory 삭제
 	if err := tx.Where("lab_test_id = ?", labTest.ID).
 		Delete(&entity.LabTestHistory{}).Error; err != nil {
-		tx.Rollback()
-		return err
+		if err != gorm.ErrRecordNotFound {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	// 새로운 LabTestHistory 생성
