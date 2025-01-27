@@ -208,17 +208,11 @@ func (m *labModel) GetLabTestByIdForLogin(idForLogin string, labType string) (*e
 	return &labTest, nil
 }
 
+// IsCorrect 업데이트
 func (m *labModel) CreatePreTestHistory(createPreTestHistoryDto dto.CreatePreTestHistoryDto) ([]string, int, int, error) {
 	tx := m.db.Begin()
 	if tx.Error != nil {
 		return nil, 0, 0, tx.Error
-	}
-
-	if err := tx.Where(&entity.LabTestHistory{
-		LabTestID: createPreTestHistoryDto.LabTestID,
-	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
-		tx.Rollback()
-		return nil, 0, 0, err
 	}
 
 	correctTestHistories := []*entity.LabTestHistory{}
@@ -307,13 +301,6 @@ func (m *labModel) CreateTestHistory(createPreTestHistoryDto dto.CreatePreTestHi
 	tx := m.db.Begin()
 	if tx.Error != nil {
 		return tx.Error
-	}
-
-	if err := tx.Where(&entity.LabTestHistory{
-		LabTestID: createPreTestHistoryDto.LabTestID,
-	}).Delete(&entity.LabTestHistory{}).Error; err != nil {
-		tx.Rollback()
-		return err
 	}
 
 	for _, result := range createPreTestHistoryDto.Results {
