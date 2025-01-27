@@ -107,12 +107,26 @@ func (h *LabHandler) StartTest(c *gin.Context) {
 	}
 
 	if startLabRequest.Type == "test" {
-		if err := h.labModel.CreateTest(lab.ID); err != nil {
+		// CSV 파일 생성을 위한 데이터 준비
+		csvContent := "Word,WrittenWord\n"
+		for _, result := range startLabRequest.Results {
+			csvContent += fmt.Sprintf("%s,%s\n", result.Word, result.WrittenWord)
+		}
+
+		// 임시 CSV 파일 생성 - fileUtil 직접 사용
+		filename, err := h.fileUtil.CreateTempCSVFile(csvContent)
+		if err != nil {
+			log.Printf("Failed to create CSV file: %v", err)
+			c.JSON(http.StatusInternalServerError, nil)
+			return
+		}
+
+		if err := h.labModel.CreateTest(lab.ID, startLabRequest.Results); err != nil {
 			c.JSON(http.StatusBadRequest, nil)
 			return
 		}
 
-		if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID); err != nil {
+		if err := h.slackUtil.SendTestStartMessage(startLabRequest.LabID, filename); err != nil {
 			log.Printf("Failed to send slack message: %v", err)
 		}
 
