@@ -15,7 +15,7 @@ type LabSleepHistory struct {
 	ID            uint `gorm:"primary_key"`
 	LabID         uint
 	Lab           Lab
-	AverageVolume int       `gorm:"average_volume"`
+	AverageVolume float64   `gorm:"average_volume"`
 	Timestamp     time.Time `gorm:"column:timestamp;type:datetime(3)"`
 }
 

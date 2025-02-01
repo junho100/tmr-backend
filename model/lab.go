@@ -10,7 +10,7 @@ import (
 )
 
 type LabModel interface {
-	CreateBreathingHistory(idForLogin string, averageVolume int, timestamp time.Time) error
+	CreateBreathingHistory(idForLogin string, averageVolume float64, timestamp time.Time) error
 	GetLabBySubjectIdForLogin(idForLogin string) (*entity.Lab, error)
 	CreateCueHistory(idForLogin string, timestamp time.Time, targetWord string) error
 	CreatePreTest(labID uint, results []dto.StartLabRequestResult) error
@@ -31,7 +31,7 @@ func NewLabModel(db *gorm.DB) LabModel {
 	}
 }
 
-func (m *labModel) CreateBreathingHistory(idForLogin string, averageVolume int, timestamp time.Time) error {
+func (m *labModel) CreateBreathingHistory(idForLogin string, averageVolume float64, timestamp time.Time) error {
 	lab, err := m.GetLabBySubjectIdForLogin(idForLogin)
 
 	if err != nil {
