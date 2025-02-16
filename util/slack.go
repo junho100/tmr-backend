@@ -32,7 +32,7 @@ func NewSlackUtil(fileUtil FileUtil, baseURL string) SlackUtil {
 func (u *slackUtil) SendPreTestStartMessage(labID string, filename string) error {
 	url := os.Getenv("SLACK_WEBHOOK_URL")
 	message := dto.SlackMessagePayload{
-		Text: fmt.Sprintf("%s의 사전 테스트가 종료되었습니다. 아래 링크를 클릭해 테스트 결과를 확인하세요.\n <https://tmr.chee-go.com/api/files/%s>\n\n 점수 입력하기\n <https://junho100.github.io/tmr-lab-web/%s/pretest-result>", labID, filename, labID),
+		Text: fmt.Sprintf("%s의 사전 테스트가 종료되었습니다. 아래 링크를 클릭해 테스트 결과를 확인하세요.\n <https://tmr.chee-go.com/api/files/%s>\n\n 점수 입력하기\n <https://junho100.github.io/tmr-lab-web/%s/pretest-result>\n\n 실험자에게 전달할 수면 페이지\n<https://junho100.github.io/tmr-lab-web/%s/breathing-monitor>\n\n 실험자에게 전달할 시험 페이지\n<https://junho100.github.io/tmr-lab-web/%s/test>", labID, filename, labID, labID, labID),
 	}
 
 	jsonData, err := json.Marshal(message)
