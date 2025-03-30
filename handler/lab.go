@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"tmr-backend/dto"
 	"tmr-backend/model"
 	"tmr-backend/util"
@@ -78,6 +79,11 @@ func (h *LabHandler) StartTest(c *gin.Context) {
 	}
 
 	if startLabRequest.Type == "pretest" {
+		// Results를 Word 필드를 기준으로 알파벳 순으로 정렬
+		sort.Slice(startLabRequest.Results, func(i, j int) bool {
+			return startLabRequest.Results[i].Word < startLabRequest.Results[j].Word
+		})
+
 		// CSV 파일 생성을 위한 데이터 준비
 		csvContent := "Word,WrittenWord\n"
 		for _, result := range startLabRequest.Results {
@@ -107,6 +113,11 @@ func (h *LabHandler) StartTest(c *gin.Context) {
 	}
 
 	if startLabRequest.Type == "test" {
+		// Results를 Word 필드를 기준으로 알파벳 순으로 정렬
+		sort.Slice(startLabRequest.Results, func(i, j int) bool {
+			return startLabRequest.Results[i].Word < startLabRequest.Results[j].Word
+		})
+
 		// CSV 파일 생성을 위한 데이터 준비
 		csvContent := "Word,WrittenWord\n"
 		for _, result := range startLabRequest.Results {
